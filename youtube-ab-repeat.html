@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>YT Loop</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+JP:wght@300;400;700&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --accent: #00e5ff;
+    --accent2: #ff3d71;
+    --text: #e8e8f0;
+    --text-dim: #6b6b80;
+    --border: #2a2a3a;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 16px 0;
+  }
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -1px;
+  }
+  .logo span { color: var(--accent2); }
+  .tagline {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── URL INPUT ─── */
+  .url-section {
+    padding: 14px 16px;
+    display: flex;
+    gap: 8px;
+  }
+  .url-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'Space Mono', monospace;
+    outline: none;
+    -webkit-appearance: none;
+    transition: border-color 0.2s;
+  }
+  .url-input::placeholder { color: var(--text-dim); font-size: 12px; }
+  .url-input:focus { border-color: var(--accent); }
+
+  .load-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .load-btn:active { opacity: 0.7; }
+
+  /* ─── VIDEO AREA ─── */
+  .video-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%;
+    background: #000;
+    overflow: hidden;
+  }
+  .video-wrapper iframe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border: none;
+  }
+  .video-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--text-dim);
+    font-size: 13px;
+    background: var(--surface);
+  }
+  .video-placeholder .icon { font-size: 40px; opacity: 0.3; }
+
+  /* ─── STATUS BAR ─── */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+  .status-dot.playing { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .status-dot.looping { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+  .status-text { color: var(--text-dim); }
+
+  /* ─── CONTROLS PANEL ─── */
+  .panel {
+    margin: 0 16px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  /* ─── AB SECTION ─── */
+  .ab-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+  }
+  .ab-cell {
+    background: var(--surface);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ab-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .ab-label .point-letter {
+    font-size: 18px;
+    font-weight: 700;
+    display: block;
+    line-height: 1;
+  }
+  .ab-label .point-letter.a-letter { color: var(--accent); }
+  .ab-label .point-letter.b-letter { color: var(--accent2); }
+
+  .ab-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .ab-time.unset { color: var(--text-dim); font-size: 16px; }
+
+  .ab-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+    text-align: center;
+  }
+  .ab-btn.a-btn { border-color: var(--accent); color: var(--accent); }
+  .ab-btn.b-btn { border-color: var(--accent2); color: var(--accent2); }
+  .ab-btn:active { opacity: 0.6; transform: scale(0.97); }
+
+  /* ─── PROGRESS / SEEK BAR ─── */
+  .seek-section {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+  }
+  .seek-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    letter-spacing: 0.08em;
+  }
+  .seek-wrap {
+    position: relative;
+    height: 32px;
+    display: flex;
+    align-items: center;
+  }
+  .seek-track {
+    position: absolute;
+    left: 0; right: 0;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: visible;
+  }
+  .seek-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s linear;
+  }
+  /* AB region highlight */
+  .ab-region {
+    position: absolute;
+    height: 100%;
+    background: rgba(0, 229, 255, 0.25);
+    border-radius: 2px;
+    display: none;
+  }
+  .seek-input {
+    position: absolute;
+    left: 0; right: 0;
+    width: 100%;
+    height: 32px;
+    opacity: 0;
+    cursor: pointer;
+    -webkit-appearance: none;
+    margin: 0;
+    z-index: 2;
+  }
+  .seek-markers {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* ─── PLAYBACK CONTROLS ─── */
+  .playback-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    gap: 8px;
+  }
+
+  .ctrl-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+  .ctrl-btn:active { opacity: 0.6; transform: scale(0.93); }
+  .ctrl-btn.play-btn {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    width: 52px;
+    height: 52px;
+    font-size: 22px;
+    border-radius: 50%;
+  }
+  .ctrl-btn.loop-on {
+    background: rgba(255,61,113,0.15);
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  /* ─── SPEED ─── */
+  .speed-section {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .speed-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    min-width: 40px;
+  }
+  .speed-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .speed-chips::-webkit-scrollbar { display: none; }
+  .speed-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .speed-chip.active {
+    background: rgba(0,229,255,0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .speed-chip:active { opacity: 0.6; }
+
+  /* ─── RECENT HISTORY ─── */
+  .history-section {
+    margin: 0 16px 24px;
+  }
+  .history-header {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding: 0 2px;
+  }
+  .history-list { display: flex; flex-direction: column; gap: 6px; }
+  .history-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .history-item:active { border-color: var(--accent); opacity: 0.8; }
+  .history-thumb {
+    width: 56px;
+    height: 32px;
+    border-radius: 4px;
+    background: var(--surface2);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .history-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .history-info { flex: 1; min-width: 0; }
+  .history-title {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+  }
+  .history-ab {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+  .history-del {
+    color: var(--text-dim);
+    font-size: 16px;
+    padding: 4px;
+    flex-shrink: 0;
+  }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 10px 20px;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    transition: transform 0.3s ease, opacity 0.3s;
+    opacity: 0;
+    z-index: 100;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">YT<span>LOOP</span></div>
+    <div class="tagline">A→B 区間リピート</div>
+  </div>
+</header>
+
+<!-- URL Input -->
+<div class="url-section">
+  <input type="url" class="url-input" id="urlInput" placeholder="YouTube URL を貼り付け..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  <button class="load-btn" id="loadBtn">読込</button>
+</div>
+
+<!-- Video -->
+<div class="video-wrapper" id="videoWrapper">
+  <div class="video-placeholder" id="placeholder">
+    <div class="icon">▶</div>
+    <div>URLを入力して動画を読み込む</div>
+  </div>
+</div>
+
+<!-- Status -->
+<div class="status-bar">
+  <div class="status-dot" id="statusDot"></div>
+  <div class="status-text" id="statusText">待機中</div>
+</div>
+
+<!-- Controls Panel -->
+<div class="panel">
+
+  <!-- AB Points -->
+  <div class="ab-grid">
+    <div class="ab-cell">
+      <div class="ab-label"><span class="point-letter a-letter">A</span>開始点</div>
+      <div class="ab-time unset" id="aTimeDisplay">-- : --</div>
+      <button class="ab-btn a-btn" id="setABtn">ここをAにセット</button>
+    </div>
+    <div class="ab-cell">
+      <div class="ab-label"><span class="point-letter b-letter">B</span>終了点</div>
+      <div class="ab-time unset" id="bTimeDisplay">-- : --</div>
+      <button class="ab-btn b-btn" id="setBBtn">ここをBにセット</button>
+    </div>
+  </div>
+
+  <!-- Seek Bar -->
+  <div class="seek-section">
+    <div class="seek-label">POSITION</div>
+    <div class="seek-wrap">
+      <div class="seek-track">
+        <div class="ab-region" id="abRegion"></div>
+        <div class="seek-fill" id="seekFill"></div>
+      </div>
+      <input type="range" class="seek-input" id="seekBar" min="0" max="100" value="0" step="0.1">
+    </div>
+    <div class="seek-markers">
+      <span id="currentTime">0:00</span>
+      <span id="totalTime">0:00</span>
+    </div>
+  </div>
+
+  <!-- Playback Controls -->
+  <div class="playback-row">
+    <button class="ctrl-btn" id="resetABBtn" title="AB解除">✕</button>
+    <button class="ctrl-btn" id="seekABtn" title="Aへ戻る">⏮</button>
+    <button class="ctrl-btn play-btn" id="playBtn">▶</button>
+    <button class="ctrl-btn" id="loopBtn" title="ABリピート">🔁</button>
+    <button class="ctrl-btn" id="saveBtn" title="保存">💾</button>
+  </div>
+
+  <!-- Speed -->
+  <div class="speed-section">
+    <div class="speed-label">SPEED</div>
+    <div class="speed-chips" id="speedChips">
+      <div class="speed-chip" data-speed="0.5">0.5×</div>
+      <div class="speed-chip" data-speed="0.75">0.75×</div>
+      <div class="speed-chip active" data-speed="1">1×</div>
+      <div class="speed-chip" data-speed="1.25">1.25×</div>
+      <div class="speed-chip" data-speed="1.5">1.5×</div>
+      <div class="speed-chip" data-speed="2">2×</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- History -->
+<div class="history-section" id="historySection" style="display:none">
+  <div class="history-header">履歴</div>
+  <div class="history-list" id="historyList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── YouTube IFrame API ───
+let player = null;
+let playerReady = false;
+let videoId = null;
+let duration = 0;
+
+let pointA = null;
+let pointB = null;
+let loopEnabled = false;
+let isPlaying = false;
+let pollingTimer = null;
+let currentSpeed = 1;
+
+// Load YouTube API
+const tag = document.createElement('script');
+tag.src = 'https://www.youtube.com/iframe_api';
+document.head.appendChild(tag);
+
+window.onYouTubeIframeAPIReady = function() {
+  // API ready — player created on demand
+};
+
+function createPlayer(vid) {
+  // Remove old player iframe if exists
+  const old = document.getElementById('ytPlayer');
+  if (old) old.remove();
+
+  const div = document.createElement('div');
+  div.id = 'ytPlayer';
+  document.getElementById('videoWrapper').appendChild(div);
+  document.getElementById('placeholder').style.display = 'none';
+
+  playerReady = false;
+  player = new YT.Player('ytPlayer', {
+    videoId: vid,
+    playerVars: {
+      playsinline: 1,
+      rel: 0,
+      modestbranding: 1,
+      controls: 1,
+    },
+    events: {
+      onReady: onPlayerReady,
+      onStateChange: onStateChange,
+    }
+  });
+}
+
+function onPlayerReady(e) {
+  playerReady = true;
+  duration = player.getDuration() || 0;
+  setStatus('準備完了', '');
+  document.getElementById('totalTime').textContent = fmtTime(duration);
+  document.getElementById('seekBar').max = duration;
+  startPolling();
+}
+
+function onStateChange(e) {
+  if (e.data === YT.PlayerState.PLAYING) {
+    isPlaying = true;
+    document.getElementById('playBtn').textContent = '⏸';
+    setStatus('再生中', 'playing');
+    startPolling();
+  } else if (e.data === YT.PlayerState.PAUSED) {
+    isPlaying = false;
+    document.getElementById('playBtn').textContent = '▶';
+    setStatus('一時停止', '');
+  } else if (e.data === YT.PlayerState.ENDED) {
+    isPlaying = false;
+    document.getElementById('playBtn').textContent = '▶';
+    setStatus('終了', '');
+    if (loopEnabled && pointA !== null) {
+      player.seekTo(pointA, true);
+      player.playVideo();
+    }
+  }
+}
+
+function startPolling() {
+  if (pollingTimer) return;
+  pollingTimer = setInterval(pollPosition, 300);
+}
+
+function pollPosition() {
+  if (!playerReady || !player) return;
+  const cur = player.getCurrentTime() || 0;
+  duration = player.getDuration() || duration;
+
+  // Update seek bar
+  const pct = duration ? (cur / duration * 100) : 0;
+  document.getElementById('seekFill').style.width = pct + '%';
+  document.getElementById('seekBar').value = cur;
+  document.getElementById('currentTime').textContent = fmtTime(cur);
+  document.getElementById('totalTime').textContent = fmtTime(duration);
+
+  // AB Region highlight
+  updateABRegion();
+
+  // Loop check
+  if (loopEnabled && pointA !== null && pointB !== null) {
+    if (cur >= pointB) {
+      player.seekTo(pointA, true);
+    }
+  }
+}
+
+function updateABRegion() {
+  const region = document.getElementById('abRegion');
+  if (pointA !== null && pointB !== null && duration) {
+    const left = pointA / duration * 100;
+    const width = (pointB - pointA) / duration * 100;
+    region.style.left = left + '%';
+    region.style.width = width + '%';
+    region.style.display = 'block';
+  } else {
+    region.style.display = 'none';
+  }
+}
+
+// ─── Extract Video ID ───
+function extractVideoId(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    /^([a-zA-Z0-9_-]{11})$/
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+// ─── Load Video ───
+document.getElementById('loadBtn').addEventListener('click', loadVideo);
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loadVideo();
+});
+
+function loadVideo() {
+  const url = document.getElementById('urlInput').value.trim();
+  const vid = extractVideoId(url);
+  if (!vid) { showToast('有効なYouTube URLを入力してください'); return; }
+
+  videoId = vid;
+  pointA = null; pointB = null;
+  loopEnabled = false;
+  updateABDisplay();
+  updateLoopBtn();
+
+  if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+
+  setStatus('読み込み中...', '');
+
+  if (!window.YT || !window.YT.Player) {
+    // API not ready yet — wait
+    window.onYouTubeIframeAPIReady = function() {
+      createPlayer(vid);
+    };
+  } else {
+    createPlayer(vid);
+  }
+}
+
+// ─── AB Controls ───
+document.getElementById('setABtn').addEventListener('click', () => {
+  if (!playerReady) { showToast('動画を先に読み込んでください'); return; }
+  pointA = player.getCurrentTime();
+  if (pointB !== null && pointA >= pointB) { pointB = null; }
+  updateABDisplay();
+  showToast(`A点セット: ${fmtTime(pointA)}`);
+  updateLoopStatus();
+});
+
+document.getElementById('setBBtn').addEventListener('click', () => {
+  if (!playerReady) { showToast('動画を先に読み込んでください'); return; }
+  pointB = player.getCurrentTime();
+  if (pointA !== null && pointB <= pointA) { pointA = null; }
+  updateABDisplay();
+  showToast(`B点セット: ${fmtTime(pointB)}`);
+  updateLoopStatus();
+});
+
+document.getElementById('resetABBtn').addEventListener('click', () => {
+  pointA = null; pointB = null;
+  loopEnabled = false;
+  updateABDisplay();
+  updateLoopBtn();
+  updateABRegion();
+  setStatus(isPlaying ? '再生中' : '待機中', isPlaying ? 'playing' : '');
+  showToast('AB点をリセットしました');
+});
+
+document.getElementById('seekABtn').addEventListener('click', () => {
+  if (!playerReady) return;
+  if (pointA !== null) {
+    player.seekTo(pointA, true);
+    showToast(`A点 (${fmtTime(pointA)}) へジャンプ`);
+  } else {
+    showToast('A点が設定されていません');
+  }
+});
+
+document.getElementById('loopBtn').addEventListener('click', () => {
+  if (pointA === null || pointB === null) {
+    showToast('A点とB点を両方セットしてください');
+    return;
+  }
+  loopEnabled = !loopEnabled;
+  updateLoopBtn();
+  if (loopEnabled) {
+    player.seekTo(pointA, true);
+    player.playVideo();
+    showToast(`🔁 ABリピート ON`);
+  } else {
+    showToast('リピート OFF');
+  }
+});
+
+function updateLoopBtn() {
+  const btn = document.getElementById('loopBtn');
+  btn.classList.toggle('loop-on', loopEnabled);
+}
+
+function updateLoopStatus() {
+  if (loopEnabled) {
+    setStatus('AB リピート中', 'looping');
+  }
+}
+
+// ─── Play/Pause ───
+document.getElementById('playBtn').addEventListener('click', () => {
+  if (!playerReady) return;
+  if (isPlaying) {
+    player.pauseVideo();
+  } else {
+    player.playVideo();
+  }
+});
+
+// ─── Seek ───
+const seekBar = document.getElementById('seekBar');
+seekBar.addEventListener('input', () => {
+  if (!playerReady) return;
+  player.seekTo(parseFloat(seekBar.value), true);
+});
+
+// ─── Speed ───
+document.querySelectorAll('.speed-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const spd = parseFloat(chip.dataset.speed);
+    currentSpeed = spd;
+    document.querySelectorAll('.speed-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    if (playerReady) {
+      player.setPlaybackRate(spd);
+      showToast(`再生速度: ${spd}×`);
+    }
+  });
+});
+
+// ─── Save to History ───
+document.getElementById('saveBtn').addEventListener('click', () => {
+  if (!videoId || pointA === null || pointB === null) {
+    showToast('動画とA/B点を設定してください');
+    return;
+  }
+  const title = getVideoTitle();
+  const entry = {
+    id: videoId,
+    title,
+    a: pointA,
+    b: pointB,
+    thumb: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+    savedAt: Date.now()
+  };
+  let history = loadHistory();
+  // Remove duplicate
+  history = history.filter(h => !(h.id === videoId && Math.abs(h.a - pointA) < 1 && Math.abs(h.b - pointB) < 1));
+  history.unshift(entry);
+  if (history.length > 20) history = history.slice(0, 20);
+  localStorage.setItem('ytloop_history', JSON.stringify(history));
+  renderHistory();
+  showToast('💾 保存しました');
+});
+
+function getVideoTitle() {
+  try {
+    return player.getVideoData().title || videoId;
+  } catch { return videoId; }
+}
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem('ytloop_history') || '[]'); } catch { return []; }
+}
+
+function renderHistory() {
+  const history = loadHistory();
+  const section = document.getElementById('historySection');
+  const list = document.getElementById('historyList');
+  if (!history.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  list.innerHTML = '';
+  history.forEach((entry, i) => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.innerHTML = `
+      <div class="history-thumb"><img src="${entry.thumb}" alt="" loading="lazy"></div>
+      <div class="history-info">
+        <div class="history-title">${entry.title}</div>
+        <div class="history-ab">A: ${fmtTime(entry.a)} → B: ${fmtTime(entry.b)}</div>
+      </div>
+      <div class="history-del" data-i="${i}">✕</div>
+    `;
+    item.querySelector('.history-del').addEventListener('click', e => {
+      e.stopPropagation();
+      const hist = loadHistory();
+      hist.splice(i, 1);
+      localStorage.setItem('ytloop_history', JSON.stringify(hist));
+      renderHistory();
+    });
+    item.addEventListener('click', () => {
+      document.getElementById('urlInput').value = `https://youtu.be/${entry.id}`;
+      loadVideo();
+      // Restore AB after load — wait for ready
+      const wait = setInterval(() => {
+        if (playerReady && duration > 0) {
+          clearInterval(wait);
+          pointA = entry.a;
+          pointB = entry.b;
+          updateABDisplay();
+          player.seekTo(pointA, true);
+          showToast('AB点を復元しました');
+        }
+      }, 500);
+    });
+    list.appendChild(item);
+  });
+}
+
+// ─── Helpers ───
+function fmtTime(s) {
+  if (!isFinite(s) || s < 0) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, '0')}`;
+}
+
+function updateABDisplay() {
+  const aEl = document.getElementById('aTimeDisplay');
+  const bEl = document.getElementById('bTimeDisplay');
+  if (pointA !== null) {
+    aEl.textContent = fmtTime(pointA);
+    aEl.classList.remove('unset');
+  } else {
+    aEl.textContent = '-- : --';
+    aEl.classList.add('unset');
+  }
+  if (pointB !== null) {
+    bEl.textContent = fmtTime(pointB);
+    bEl.classList.remove('unset');
+  } else {
+    bEl.textContent = '-- : --';
+    bEl.classList.add('unset');
+  }
+  updateABRegion();
+}
+
+function setStatus(text, type) {
+  document.getElementById('statusText').textContent = text;
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot';
+  if (type) dot.classList.add(type);
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ─── Init ───
+renderHistory();
+</script>
+</body>
+</html>
