@@ -401,6 +401,16 @@
   }
   .fs-exit-fixed.show { display: block; }
   .fs-exit-fixed.visible { opacity: 1; }
+  /* iframeのタップを検知するための透明レイヤー */
+  .fs-tap-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: transparent;
+    display: none;
+    pointer-events: auto;
+  }
+  .fs-tap-layer.show { display: block; }
 
   .ctrl-btn.loop-on {
     background: rgba(255,61,113,0.15);
@@ -622,6 +632,9 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- タップ検知レイヤー -->
+<div class="fs-tap-layer" id="fsTapLayer"></div>
 
 <!-- 常時表示の戻るボタン -->
 <button class="fs-exit-fixed" id="fsExitFixed">✕ 戻る</button>
@@ -1045,6 +1058,7 @@ function enterFullscreen() {
   wrapper.classList.add('fullscreen');
   document.getElementById('fsExitFixed').classList.add('show');
   wrapper.addEventListener('click', toggleFsControls);
+  document.getElementById('fsTapLayer').addEventListener('click', toggleFsControls);
   showFsControls();
   updateFsUI();
 }
@@ -1054,6 +1068,8 @@ function exitFullscreen() {
   const wrapper = document.getElementById('videoWrapper');
   wrapper.classList.remove('fullscreen');
   hideFsControls();
+  document.getElementById('fsTapLayer').classList.remove('show');
+  document.getElementById('fsTapLayer').removeEventListener('click', toggleFsControls);
   document.getElementById('fsExitFixed').classList.remove('show');
   wrapper.removeEventListener('click', toggleFsControls);
   if (fsHideTimer) clearTimeout(fsHideTimer);
@@ -1065,8 +1081,10 @@ let fsHideTimer = null;
 function showFsControls() {
   const ctrl = document.getElementById('fullscreenControls');
   const exitBtn = document.getElementById('fsExitFixed');
+  const tapLayer = document.getElementById('fsTapLayer');
   ctrl.classList.add('show');
   exitBtn.classList.add('visible');
+  tapLayer.classList.remove('show'); // 操作パネル表示中はタップレイヤー非表示
   fsControlsVisible = true;
   resetFsHideTimer();
 }
@@ -1074,8 +1092,10 @@ function showFsControls() {
 function hideFsControls() {
   const ctrl = document.getElementById('fullscreenControls');
   const exitBtn = document.getElementById('fsExitFixed');
+  const tapLayer = document.getElementById('fsTapLayer');
   ctrl.classList.remove('show');
   exitBtn.classList.remove('visible');
+  tapLayer.classList.add('show'); // 非表示時はタップレイヤーを有効化
   fsControlsVisible = false;
 }
 
