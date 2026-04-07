@@ -383,21 +383,24 @@
   /* 常時表示の戻るボタン */
   .fs-exit-fixed {
     position: fixed;
-    top: 8px;
-    right: 0px;
+    top: 12px;
+    right: 12px;
     z-index: 1200;
     background: rgba(0,0,0,0.6);
     border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 8px 0 0 8px;
+    border-radius: 10px;
     color: #fff;
     font-size: 12px;
-    padding: 8px 10px 8px 12px;
+    padding: 8px 14px;
     cursor: pointer;
     display: none;
     pointer-events: auto;
     font-family: 'Space Mono', monospace;
+    opacity: 0;
+    transition: opacity 0.3s;
   }
   .fs-exit-fixed.show { display: block; }
+  .fs-exit-fixed.visible { opacity: 1; }
 
   .ctrl-btn.loop-on {
     background: rgba(255,61,113,0.15);
@@ -1040,10 +1043,9 @@ function enterFullscreen() {
   fsControlsVisible = true;
   const wrapper = document.getElementById('videoWrapper');
   wrapper.classList.add('fullscreen');
-  document.getElementById('fullscreenControls').classList.add('show');
   document.getElementById('fsExitFixed').classList.add('show');
   wrapper.addEventListener('click', toggleFsControls);
-  resetFsHideTimer();
+  showFsControls();
   updateFsUI();
 }
 
@@ -1051,7 +1053,7 @@ function exitFullscreen() {
   isFullscreen = false;
   const wrapper = document.getElementById('videoWrapper');
   wrapper.classList.remove('fullscreen');
-  document.getElementById('fullscreenControls').classList.remove('show');
+  hideFsControls();
   document.getElementById('fsExitFixed').classList.remove('show');
   wrapper.removeEventListener('click', toggleFsControls);
   if (fsHideTimer) clearTimeout(fsHideTimer);
@@ -1059,24 +1061,36 @@ function exitFullscreen() {
 
 let fsControlsVisible = true;
 let fsHideTimer = null;
-function toggleFsControls() {
+
+function showFsControls() {
   const ctrl = document.getElementById('fullscreenControls');
+  const exitBtn = document.getElementById('fsExitFixed');
+  ctrl.classList.add('show');
+  exitBtn.classList.add('visible');
+  fsControlsVisible = true;
+  resetFsHideTimer();
+}
+
+function hideFsControls() {
+  const ctrl = document.getElementById('fullscreenControls');
+  const exitBtn = document.getElementById('fsExitFixed');
+  ctrl.classList.remove('show');
+  exitBtn.classList.remove('visible');
+  fsControlsVisible = false;
+}
+
+function toggleFsControls() {
   if (fsControlsVisible) {
-    ctrl.classList.remove('show');
-    fsControlsVisible = false;
+    hideFsControls();
   } else {
-    ctrl.classList.add('show');
-    fsControlsVisible = true;
-    resetFsHideTimer();
+    showFsControls();
   }
 }
+
 function resetFsHideTimer() {
   if (fsHideTimer) clearTimeout(fsHideTimer);
   fsHideTimer = setTimeout(() => {
-    if (isFullscreen) {
-      document.getElementById('fullscreenControls').classList.remove('show');
-      fsControlsVisible = false;
-    }
+    if (isFullscreen) hideFsControls();
   }, 3000);
 }
 
