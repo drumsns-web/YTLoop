@@ -299,6 +299,84 @@
     font-size: 22px;
     border-radius: 50%;
   }
+  /* ─── FULLSCREEN ─── */
+  .video-wrapper.fullscreen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    padding-top: 0;
+    z-index: 999;
+    background: #000;
+  }
+  .fullscreen-controls {
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(0,0,0,0.8);
+    padding: 12px 20px;
+    z-index: 1000;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .fullscreen-controls.show { display: flex; }
+  .fullscreen-seek-wrap {
+    position: relative;
+    height: 32px;
+    display: flex;
+    align-items: center;
+  }
+  .fullscreen-seek-track {
+    position: absolute;
+    left: 0; right: 0;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .fullscreen-seek-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00e5ff, #ff3d71);
+    border-radius: 2px;
+    width: 0%;
+  }
+  .fullscreen-seek-input {
+    position: absolute;
+    left: 0; right: 0;
+    width: 100%;
+    height: 32px;
+    opacity: 0;
+    cursor: pointer;
+    -webkit-appearance: none;
+    margin: 0;
+    z-index: 2;
+  }
+  .fullscreen-btns {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 8px;
+  }
+  .fs-btn {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 18px;
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .fs-btn.fs-play { background: #00e5ff; color: #000; border-radius: 50%; width: 52px; height: 52px; font-size: 22px; }
+  .fs-time {
+    font-family: monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    display: flex;
+    justify-content: space-between;
+  }
+
   .ctrl-btn.loop-on {
     background: rgba(255,61,113,0.15);
     border-color: var(--accent2);
@@ -494,6 +572,7 @@
     <button class="ctrl-btn play-btn" id="playBtn">▶</button>
     <button class="ctrl-btn" id="loopBtn" title="ABリピート">🔁</button>
     <button class="ctrl-btn" id="saveBtn" title="保存">💾</button>
+    <button class="ctrl-btn" id="fullscreenBtn" title="フルスクリーン">⛶</button>
   </div>
 
   <!-- Speed -->
@@ -518,6 +597,27 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Fullscreen Controls Overlay -->
+<div class="fullscreen-controls" id="fullscreenControls">
+  <div class="fs-time">
+    <span id="fsCurrentTime">0:00</span>
+    <span id="fsTotalTime">0:00</span>
+  </div>
+  <div class="fullscreen-seek-wrap">
+    <div class="fullscreen-seek-track">
+      <div class="fullscreen-seek-fill" id="fsSeekFill"></div>
+    </div>
+    <input type="range" class="fullscreen-seek-input" id="fsSeekBar" min="0" max="100" value="0" step="0.1">
+  </div>
+  <div class="fullscreen-btns">
+    <button class="fs-btn" id="fsResetBtn">✕AB</button>
+    <button class="fs-btn" id="fsSeekABtn">⏮</button>
+    <button class="fs-btn fs-play" id="fsPlayBtn">▶</button>
+    <button class="fs-btn" id="fsLoopBtn">🔁</button>
+    <button class="fs-btn" id="fsExitBtn">⤓</button>
+  </div>
+</div>
 
 <script>
 // ─── YouTube IFrame API ───
@@ -901,6 +1001,130 @@ function showToast(msg) {
   t.classList.add('show');
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+
+// ─── FULLSCREEN ───
+let isFullscreen = false;
+
+document.getElementById('fullscreenBtn').addEventListener('click', enterFullscreen);
+
+function enterFullscreen() {
+  if (!playerReady) { showToast('動画を先に読み込んでください'); return; }
+  isFullscreen = true;
+  const wrapper = document.getElementById('videoWrapper');
+  wrapper.classList.add('fullscreen');
+  document.getElementById('fullscreenControls').classList.add('show');
+  // タップで操作パネル表示/非表示
+  wrapper.addEventListener('click', toggleFsControls);
+  updateFsUI();
+}
+
+function exitFullscreen() {
+  isFullscreen = false;
+  const wrapper = document.getElementById('videoWrapper');
+  wrapper.classList.remove('fullscreen');
+  document.getElementById('fullscreenControls').classList.remove('show');
+  wrapper.removeEventListener('click', toggleFsControls);
+}
+
+let fsControlsVisible = true;
+let fsHideTimer = null;
+function toggleFsControls() {
+  const ctrl = document.getElementById('fullscreenControls');
+  if (fsControlsVisible) {
+    ctrl.classList.remove('show');
+    fsControlsVisible = false;
+  } else {
+    ctrl.classList.add('show');
+    fsControlsVisible = true;
+    resetFsHideTimer();
+  }
+}
+function resetFsHideTimer() {
+  if (fsHideTimer) clearTimeout(fsHideTimer);
+  fsHideTimer = setTimeout(() => {
+    if (isFullscreen) {
+      document.getElementById('fullscreenControls').classList.remove('show');
+      fsControlsVisible = false;
+    }
+  }, 3000);
+}
+
+document.getElementById('fsExitBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  exitFullscreen();
+});
+document.getElementById('fsPlayBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!playerReady) return;
+  if (isPlaying) { player.pauseVideo(); } else { player.playVideo(); }
+  resetFsHideTimer();
+});
+document.getElementById('fsSeekABtn').addEventListener('click', e => {
+  e.stopPropagation();
+  if (pointA !== null) { player.seekTo(pointA, true); showToast('A点へジャンプ'); }
+  resetFsHideTimer();
+});
+document.getElementById('fsResetBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  pointA = null; pointB = null; loopEnabled = false;
+  updateABDisplay(); updateLoopBtn(); updateABRegion();
+  showToast('AB点リセット');
+  resetFsHideTimer();
+});
+document.getElementById('fsLoopBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  if (pointA === null || pointB === null) { showToast('A・B点を設定してください'); return; }
+  loopEnabled = !loopEnabled;
+  updateLoopBtn();
+  updateFsLoopBtn();
+  if (loopEnabled) { player.seekTo(pointA, true); player.playVideo(); showToast('🔁 ABリピート ON'); }
+  else { showToast('リピート OFF'); }
+  resetFsHideTimer();
+});
+
+const fsSeekBar = document.getElementById('fsSeekBar');
+fsSeekBar.addEventListener('input', e => {
+  e.stopPropagation();
+  if (!playerReady) return;
+  player.seekTo(parseFloat(fsSeekBar.value), true);
+  resetFsHideTimer();
+});
+
+function updateFsUI() {
+  if (!isFullscreen) return;
+  const cur = playerReady ? (player.getCurrentTime() || 0) : 0;
+  const pct = duration ? (cur / duration * 100) : 0;
+  document.getElementById('fsSeekFill').style.width = pct + '%';
+  document.getElementById('fsSeekBar').value = cur;
+  document.getElementById('fsSeekBar').max = duration;
+  document.getElementById('fsCurrentTime').textContent = fmtTime(cur);
+  document.getElementById('fsTotalTime').textContent = fmtTime(duration);
+  document.getElementById('fsPlayBtn').textContent = isPlaying ? '⏸' : '▶';
+  updateFsLoopBtn();
+}
+function updateFsLoopBtn() {
+  const btn = document.getElementById('fsLoopBtn');
+  btn.style.background = loopEnabled ? 'rgba(255,61,113,0.4)' : '';
+}
+
+// pollPositionにfsUI更新を追加
+const origPollPosition = pollPosition;
+function pollPosition() {
+  if (!playerReady || !player) return;
+  const cur = player.getCurrentTime() || 0;
+  duration = player.getDuration() || duration;
+  const pct = duration ? (cur / duration * 100) : 0;
+  document.getElementById('seekFill').style.width = pct + '%';
+  document.getElementById('seekBar').value = cur;
+  document.getElementById('currentTime').textContent = fmtTime(cur);
+  document.getElementById('totalTime').textContent = fmtTime(duration);
+  updateABRegion();
+  if (loopEnabled && pointA !== null && pointB !== null) {
+    if (cur >= pointB) { player.seekTo(pointA, true); }
+  }
+  if (isFullscreen) updateFsUI();
 }
 
 // ─── Init ───
