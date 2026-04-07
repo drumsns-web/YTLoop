@@ -315,9 +315,10 @@
     bottom: 0; left: 0; right: 0;
     background: rgba(0,0,0,0.8);
     padding: 12px 20px;
-    z-index: 1000;
+    z-index: 1100;
     flex-direction: column;
     gap: 10px;
+    pointer-events: auto;
   }
   .fullscreen-controls.show { display: flex; }
   .fullscreen-seek-wrap {
@@ -367,6 +368,9 @@
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
+    position: relative;
+    z-index: 1100;
+    pointer-events: auto;
   }
   .fs-btn.fs-play { background: #00e5ff; color: #000; border-radius: 50%; width: 52px; height: 52px; font-size: 22px; }
   .fs-time {
