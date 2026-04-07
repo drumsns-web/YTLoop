@@ -380,6 +380,24 @@
     display: flex;
     justify-content: space-between;
   }
+  /* 常時表示の戻るボタン */
+  .fs-exit-fixed {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 1200;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 13px;
+    padding: 8px 12px;
+    cursor: pointer;
+    display: none;
+    pointer-events: auto;
+    font-family: 'Space Mono', monospace;
+  }
+  .fs-exit-fixed.show { display: block; }
 
   .ctrl-btn.loop-on {
     background: rgba(255,61,113,0.15);
@@ -601,6 +619,9 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- 常時表示の戻るボタン -->
+<button class="fs-exit-fixed" id="fsExitFixed">✕ 戻る</button>
 
 <!-- Fullscreen Controls Overlay -->
 <div class="fullscreen-controls" id="fullscreenControls">
@@ -1016,11 +1037,13 @@ document.getElementById('fullscreenBtn').addEventListener('click', enterFullscre
 function enterFullscreen() {
   if (!playerReady) { showToast('動画を先に読み込んでください'); return; }
   isFullscreen = true;
+  fsControlsVisible = true;
   const wrapper = document.getElementById('videoWrapper');
   wrapper.classList.add('fullscreen');
   document.getElementById('fullscreenControls').classList.add('show');
-  // タップで操作パネル表示/非表示
+  document.getElementById('fsExitFixed').classList.add('show');
   wrapper.addEventListener('click', toggleFsControls);
+  resetFsHideTimer();
   updateFsUI();
 }
 
@@ -1029,7 +1052,9 @@ function exitFullscreen() {
   const wrapper = document.getElementById('videoWrapper');
   wrapper.classList.remove('fullscreen');
   document.getElementById('fullscreenControls').classList.remove('show');
+  document.getElementById('fsExitFixed').classList.remove('show');
   wrapper.removeEventListener('click', toggleFsControls);
+  if (fsHideTimer) clearTimeout(fsHideTimer);
 }
 
 let fsControlsVisible = true;
@@ -1055,6 +1080,10 @@ function resetFsHideTimer() {
   }, 3000);
 }
 
+document.getElementById('fsExitFixed').addEventListener('click', e => {
+  e.stopPropagation();
+  exitFullscreen();
+});
 document.getElementById('fsExitBtn').addEventListener('click', e => {
   e.stopPropagation();
   exitFullscreen();
