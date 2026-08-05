@@ -1486,10 +1486,11 @@
   }
   .quick-control-toggle:active { opacity: 0.65; }
   .quick-control-arrow {
+    display: inline-block;
     color: var(--accent2);
-    transition: transform 0.18s ease;
+    min-width: 1em;
+    text-align: center;
   }
-  .quick-control-group.collapsed .quick-control-arrow { transform: rotate(-90deg); }
   .quick-control-body {
     padding-top: 6px;
   }
@@ -3259,14 +3260,14 @@
     <div class="quick-control-group" data-quick-control="seek">
       <button type="button" class="quick-control-toggle" data-quick-toggle="seek" aria-expanded="true">
         <span>⏱ 動画を戻す/進める<span class="customizable-note">設定で変更可能</span></span>
-        <span class="quick-control-arrow">▼</span>
+        <span class="quick-control-arrow">▲</span>
       </button>
       <div class="quick-control-body"><div class="seek-bar-quick-row" id="ytSeekRow"></div></div>
     </div>
     <div class="quick-control-group" data-quick-control="speed">
       <button type="button" class="quick-control-toggle" data-quick-toggle="speed" aria-expanded="true">
         <span>⏩ 再生速度<span class="customizable-note">設定で変更可能</span></span>
-        <span class="quick-control-arrow">▼</span>
+        <span class="quick-control-arrow">▲</span>
       </button>
       <div class="quick-control-body"><div class="speed-quick-row" id="ytSpeedRow"></div></div>
     </div>
@@ -3545,14 +3546,14 @@
     <div class="quick-control-group" data-quick-control="seek">
       <button type="button" class="quick-control-toggle" data-quick-toggle="seek" aria-expanded="true">
         <span>⏱ 動画・音源を戻す/進める<span class="customizable-note">設定で変更可能</span></span>
-        <span class="quick-control-arrow">▼</span>
+        <span class="quick-control-arrow">▲</span>
       </button>
       <div class="quick-control-body"><div class="seek-bar-quick-row" id="localSeekRow"></div></div>
     </div>
     <div class="quick-control-group" data-quick-control="speed">
       <button type="button" class="quick-control-toggle" data-quick-toggle="speed" aria-expanded="true">
         <span>⏩ 再生速度<span class="customizable-note">設定で変更可能</span></span>
-        <span class="quick-control-arrow">▼</span>
+        <span class="quick-control-arrow">▲</span>
       </button>
       <div class="quick-control-body"><div class="speed-quick-row" id="localSpeedRow"></div></div>
     </div>
@@ -6963,7 +6964,11 @@ function applyQuickControlPreferences(settings = loadSettings()) {
     group.classList.toggle('is-hidden', !visibility[type]);
     group.classList.toggle('collapsed', collapsed);
     const toggle = group.querySelector('[data-quick-toggle]');
-    if (toggle) toggle.setAttribute('aria-expanded', String(!collapsed));
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      const arrow = toggle.querySelector('.quick-control-arrow');
+      if (arrow) arrow.textContent = collapsed ? '▼' : '▲';
+    }
   });
   document.querySelectorAll('.seek-bar-quick').forEach(container => {
     const hasVisibleGroup = Array.from(container.querySelectorAll('[data-quick-control]'))
