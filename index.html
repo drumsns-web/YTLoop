@@ -1462,6 +1462,38 @@
     padding-bottom: 10px;
     border-bottom: 1px dashed var(--border);
   }
+  .quick-control-group + .quick-control-group {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+  }
+  .quick-control-group.is-hidden { display: none; }
+  .quick-control-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    padding: 2px 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    opacity: 0.9;
+  }
+  .quick-control-toggle:active { opacity: 0.65; }
+  .quick-control-arrow {
+    color: var(--accent2);
+    transition: transform 0.18s ease;
+  }
+  .quick-control-group.collapsed .quick-control-arrow { transform: rotate(-90deg); }
+  .quick-control-body {
+    padding-top: 6px;
+  }
+  .quick-control-group.collapsed .quick-control-body { display: none; }
   .seek-bar-quick-label {
     font-family: 'Space Mono', monospace;
     font-size: 11px;
@@ -3224,10 +3256,20 @@
 <div class="panel">
   <!-- 動画シーク（±秒） -->
   <div class="seek-bar-quick">
-    <div class="seek-bar-quick-label">⏱ 動画を戻す/進める<span class="customizable-note">設定で変更可能</span></div>
-    <div class="seek-bar-quick-row" id="ytSeekRow"></div>
-    <div class="speed-quick-label">⏩ 再生速度<span class="customizable-note">設定で変更可能</span></div>
-    <div class="speed-quick-row" id="ytSpeedRow"></div>
+    <div class="quick-control-group" data-quick-control="seek">
+      <button type="button" class="quick-control-toggle" data-quick-toggle="seek" aria-expanded="true">
+        <span>⏱ 動画を戻す/進める<span class="customizable-note">設定で変更可能</span></span>
+        <span class="quick-control-arrow">▼</span>
+      </button>
+      <div class="quick-control-body"><div class="seek-bar-quick-row" id="ytSeekRow"></div></div>
+    </div>
+    <div class="quick-control-group" data-quick-control="speed">
+      <button type="button" class="quick-control-toggle" data-quick-toggle="speed" aria-expanded="true">
+        <span>⏩ 再生速度<span class="customizable-note">設定で変更可能</span></span>
+        <span class="quick-control-arrow">▼</span>
+      </button>
+      <div class="quick-control-body"><div class="speed-quick-row" id="ytSpeedRow"></div></div>
+    </div>
   </div>
   <!-- AB Points -->
   <div class="ab-grid">
@@ -3500,10 +3542,20 @@
 
 <div class="panel">
   <div class="seek-bar-quick">
-    <div class="seek-bar-quick-label">⏱ 動画・音源を戻す/進める<span class="customizable-note">設定で変更可能</span></div>
-    <div class="seek-bar-quick-row" id="localSeekRow"></div>
-    <div class="speed-quick-label">⏩ 再生速度<span class="customizable-note">設定で変更可能</span></div>
-    <div class="speed-quick-row" id="localSpeedRow"></div>
+    <div class="quick-control-group" data-quick-control="seek">
+      <button type="button" class="quick-control-toggle" data-quick-toggle="seek" aria-expanded="true">
+        <span>⏱ 動画・音源を戻す/進める<span class="customizable-note">設定で変更可能</span></span>
+        <span class="quick-control-arrow">▼</span>
+      </button>
+      <div class="quick-control-body"><div class="seek-bar-quick-row" id="localSeekRow"></div></div>
+    </div>
+    <div class="quick-control-group" data-quick-control="speed">
+      <button type="button" class="quick-control-toggle" data-quick-toggle="speed" aria-expanded="true">
+        <span>⏩ 再生速度<span class="customizable-note">設定で変更可能</span></span>
+        <span class="quick-control-arrow">▼</span>
+      </button>
+      <div class="quick-control-body"><div class="speed-quick-row" id="localSpeedRow"></div></div>
+    </div>
   </div>
   <div class="ab-grid">
     <div class="ab-cell">
@@ -3906,6 +3958,21 @@
           <div class="settings-row-sub">ループの瞬間にビープ音</div>
         </div>
         <button class="tempo-up-onoff" id="settingLoopBeep" style="min-width:60px;padding:6px 14px">OFF</button>
+      </div>
+
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">送り・戻しボタンを表示</div>
+          <div class="settings-row-sub">OFFにするとメイン画面から完全に非表示</div>
+        </div>
+        <button class="tempo-up-onoff on" id="settingShowQuickSeek" style="min-width:60px;padding:6px 14px">ON</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">速度ボタンを表示</div>
+          <div class="settings-row-sub">OFFにするとメイン画面から完全に非表示</div>
+        </div>
+        <button class="tempo-up-onoff on" id="settingShowQuickSpeed" style="min-width:60px;padding:6px 14px">ON</button>
       </div>
 
       <!-- カウントイン -->
@@ -6612,6 +6679,8 @@ function saveSettings() {
     countIn: document.getElementById('settingCountIn').classList.contains('on'),
     countSound: document.getElementById('settingCountSound').classList.contains('on'),
     countEveryLoop: document.getElementById('settingCountEveryLoop').classList.contains('on'),
+    showQuickSeek: document.getElementById('settingShowQuickSeek').classList.contains('on'),
+    showQuickSpeed: document.getElementById('settingShowQuickSpeed').classList.contains('on'),
     bpm: parseInt(document.getElementById('bpmInput').value) || 120,
     countNum: parseInt(document.querySelector('.count-num-chip.active')?.dataset.count) || 4
   };
@@ -6626,6 +6695,15 @@ function applySettings() {
   const beepBtn = document.getElementById('settingLoopBeep');
   beepBtn.classList.toggle('on', !!s.loopBeep);
   beepBtn.textContent = s.loopBeep ? 'ON' : 'OFF';
+  const showQuickSeek = s.showQuickSeek !== false;
+  const showSeekBtn = document.getElementById('settingShowQuickSeek');
+  showSeekBtn.classList.toggle('on', showQuickSeek);
+  showSeekBtn.textContent = showQuickSeek ? 'ON' : 'OFF';
+  const showQuickSpeed = s.showQuickSpeed !== false;
+  const showSpeedBtn = document.getElementById('settingShowQuickSpeed');
+  showSpeedBtn.classList.toggle('on', showQuickSpeed);
+  showSpeedBtn.textContent = showQuickSpeed ? 'ON' : 'OFF';
+  applyQuickControlPreferences(s);
   // カウントイン
   const ciBtn = document.getElementById('settingCountIn');
   ciBtn.classList.toggle('on', !!s.countIn);
@@ -6867,6 +6945,51 @@ document.getElementById('settingLoopBeep').addEventListener('click', () => {
   if (btn.classList.contains('on')) playBeep();
 });
 
+// メイン画面のクイック操作（折り畳み・表示設定）
+const QUICK_CONTROL_STATE_KEY = 'cliploop_quick_control_state';
+function loadQuickControlState() {
+  try { return JSON.parse(localStorage.getItem(QUICK_CONTROL_STATE_KEY) || '{}'); }
+  catch { return {}; }
+}
+function applyQuickControlPreferences(settings = loadSettings()) {
+  const state = loadQuickControlState();
+  const visibility = {
+    seek: settings.showQuickSeek !== false,
+    speed: settings.showQuickSpeed !== false
+  };
+  document.querySelectorAll('[data-quick-control]').forEach(group => {
+    const type = group.dataset.quickControl;
+    const collapsed = state[type] === 'collapsed';
+    group.classList.toggle('is-hidden', !visibility[type]);
+    group.classList.toggle('collapsed', collapsed);
+    const toggle = group.querySelector('[data-quick-toggle]');
+    if (toggle) toggle.setAttribute('aria-expanded', String(!collapsed));
+  });
+  document.querySelectorAll('.seek-bar-quick').forEach(container => {
+    const hasVisibleGroup = Array.from(container.querySelectorAll('[data-quick-control]'))
+      .some(group => !group.classList.contains('is-hidden'));
+    container.style.display = hasVisibleGroup ? '' : 'none';
+  });
+}
+document.querySelectorAll('[data-quick-toggle]').forEach(toggle => {
+  toggle.addEventListener('click', () => {
+    const type = toggle.dataset.quickToggle;
+    const state = loadQuickControlState();
+    state[type] = state[type] === 'collapsed' ? 'open' : 'collapsed';
+    localStorage.setItem(QUICK_CONTROL_STATE_KEY, JSON.stringify(state));
+    applyQuickControlPreferences();
+  });
+});
+[['settingShowQuickSeek', 'seek'], ['settingShowQuickSpeed', 'speed']].forEach(([id]) => {
+  document.getElementById(id).addEventListener('click', () => {
+    const btn = document.getElementById(id);
+    btn.classList.toggle('on');
+    btn.textContent = btn.classList.contains('on') ? 'ON' : 'OFF';
+    saveSettings();
+    applyQuickControlPreferences();
+  });
+});
+
 // ─── カウントイン ───
 // メイン画面のトグル帯と設定画面のボタンを同期
 function setCountIn(on) {
@@ -7014,13 +7137,22 @@ function playClick(accent) {
 
 // カウントイン実行（Promiseで完了を待てる）
 let countInActive = false;
+function getActivePlaybackRate() {
+  const ytMode = document.getElementById('ytMode');
+  if (ytMode && ytMode.classList.contains('active')) {
+    return Math.max(0.05, Number(currentSpeed) || 1);
+  }
+  if (localMedia && Number.isFinite(localMedia.playbackRate)) {
+    return Math.max(0.05, localMedia.playbackRate);
+  }
+  return Math.max(0.05, Number(localSpeed) || 1);
+}
 function runCountIn() {
   return new Promise(resolve => {
     const s = loadSettings();
     if (!s.countIn) { resolve(); return; }
     const bpm = s.bpm || 120;
     const count = s.countNum || 4;
-    const beatMs = 60000 / bpm;
     const overlay = document.getElementById('countinOverlay');
     const numEl = document.getElementById('countinNumber');
     countInActive = true;
@@ -7040,6 +7172,9 @@ function runCountIn() {
       numEl.style.animation = 'countinPop 0.15s ease-out';
       playClick(i % 4 === 0); // 各小節の頭をアクセント
       i++;
+      // 設定BPMを基準に、現在の再生速度へ追従する。
+      // カウント中に速度が変わった場合も、次の拍から新しい速度を反映。
+      const beatMs = 60000 / (bpm * getActivePlaybackRate());
       setTimeout(tick, beatMs);
     };
     tick();
