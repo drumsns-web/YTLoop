@@ -3301,6 +3301,7 @@
       <span class="ci-bar-label">🥁 カウントイン</span>
       <span class="ci-bar-state" id="countInBarState">OFF</span>
     </button>
+    <button class="countin-settings-btn" id="countInTapBtn" title="タップテンポ">👆 TAP</button>
     <button class="countin-settings-btn" id="countInSettingsBtn" title="カウントイン設定">⚙ 設定</button>
   </div>
   <div class="repeat-row repeat-split">
@@ -3586,6 +3587,7 @@
       <span class="ci-bar-label">🥁 カウントイン</span>
       <span class="ci-bar-state" id="localCountInBarState">OFF</span>
     </button>
+    <button class="countin-settings-btn" id="localCountInTapBtn" title="タップテンポ">👆 TAP</button>
     <button class="countin-settings-btn" id="localCountInSettingsBtn" title="カウントイン設定">⚙ 設定</button>
   </div>
   <div class="repeat-row repeat-split">
@@ -3998,6 +4000,11 @@
           <div class="settings-row-sub" style="margin-bottom:6px">曲に合わせてタップしてテンポを測定</div>
           <button class="tap-tempo-btn" id="tapTempoBtn">👆 タップでテンポ測定</button>
           <div class="tap-tempo-status" id="tapTempoStatus"></div>
+        </div>
+        <div>
+          <div class="settings-row-sub" style="margin-bottom:6px">ローカルで読み込んだ音声・動画からテンポを推定</div>
+          <button class="tap-tempo-btn" id="autoBpmBtn">🎵 読み込んだファイルからBPM解析</button>
+          <div class="tap-tempo-status" id="autoBpmStatus"></div>
         </div>
         <div>
           <div class="settings-row-label" style="margin-bottom:6px">カウント数</div>
@@ -6686,6 +6693,7 @@ function saveSettings() {
     countNum: parseInt(document.querySelector('.count-num-chip.active')?.dataset.count) || 4
   };
   localStorage.setItem('cliploop_settings', JSON.stringify(s));
+  if (typeof syncCountInUI === 'function') syncCountInUI(s.countIn);
 }
 function applySettings() {
   const s = loadSettings();
@@ -7012,12 +7020,15 @@ function syncCountInUI(on) {
   }
   const detail = document.getElementById('countInDetail');
   if (detail) detail.style.display = on ? 'flex' : 'none';
+  const bpm = Math.max(30, Math.min(300,
+    parseInt(document.getElementById('bpmInput')?.value) || loadSettings().bpm || 120
+  ));
   // メイン画面の帯（YouTube・ローカル）
   [['countInBar', 'countInBarState'], ['localCountInBar', 'localCountInBarState']].forEach(([barId, stId]) => {
     const bar = document.getElementById(barId);
     const st = document.getElementById(stId);
     if (bar) bar.classList.toggle('on', on);
-    if (st) st.textContent = on ? 'ON' : 'OFF';
+    if (st) st.textContent = `${on ? 'ON' : 'OFF'} · ${bpm} BPM`;
   });
 }
 document.getElementById('countInBar')?.addEventListener('click', () => {
@@ -7089,7 +7100,7 @@ document.querySelectorAll('.count-num-chip').forEach(chip => {
 // タップテンポ
 let tapTimes = [];
 let tapTimeout = null;
-document.getElementById('tapTempoBtn').addEventListener('click', () => {
+function handleTapTempo() {
   const now = performance.now();
   // 2秒以上空いたらリセット
   if (tapTimes.length && now - tapTimes[tapTimes.length - 1] > 2000) tapTimes = [];
@@ -7107,9 +7118,11 @@ document.getElementById('tapTempoBtn').addEventListener('click', () => {
       document.getElementById('bpmInput').value = bpm;
       statusEl.textContent = `測定中: ${bpm} BPM（${tapTimes.length}タップ）`;
       saveSettings();
+      showToast(`👆 ${bpm} BPM（${tapTimes.length}タップ）`);
     }
   } else {
     statusEl.textContent = 'タップを続けてください...';
+    showToast('👆 タップを続けてください');
   }
   // 一定時間後に確定表示
   if (tapTimeout) clearTimeout(tapTimeout);
@@ -7119,6 +7132,112 @@ document.getElementById('tapTempoBtn').addEventListener('click', () => {
     }
     tapTimes = [];
   }, 2000);
+}
+document.getElementById('tapTempoBtn').addEventListener('click', handleTapTempo);
+document.getElementById('countInTapBtn').addEventListener('click', handleTapTempo);
+document.getElementById('localCountInTapBtn').addEventListener('click', handleTapTempo);
+
+// ローカル音声・動画のオンセット強度を自己相関し、BPMを推定する。
+function estimateBpmFromAudioBuffer(buffer) {
+  if (!buffer || buffer.length < buffer.sampleRate * 8) {
+    throw new Error('8秒以上の音声が必要です');
+  }
+  const sampleRate = buffer.sampleRate;
+  const channelCount = Math.min(2, buffer.numberOfChannels);
+  const channels = [];
+  for (let ch = 0; ch < channelCount; ch++) channels.push(buffer.getChannelData(ch));
+
+  // 長い無音イントロを避けつつ、最大3分を解析する。
+  const startSec = buffer.duration > 45 ? Math.min(10, buffer.duration * 0.05) : 0;
+  const startSample = Math.floor(startSec * sampleRate);
+  const endSample = Math.min(buffer.length, startSample + Math.floor(180 * sampleRate));
+  const hop = 1024;
+  const samplesPerEnergy = Math.ceil((endSample - startSample) / hop);
+  const energy = new Float32Array(samplesPerEnergy);
+  let energyIndex = 0;
+  for (let pos = startSample; pos < endSample; pos += hop) {
+    const blockEnd = Math.min(endSample, pos + hop);
+    let sum = 0;
+    let count = 0;
+    // 4サンプルごとに読むことで、十分な精度を保ちながら処理を軽くする。
+    for (let i = pos; i < blockEnd; i += 4) {
+      let sample = 0;
+      for (let ch = 0; ch < channelCount; ch++) sample += channels[ch][i] || 0;
+      sample /= channelCount;
+      sum += sample * sample;
+      count++;
+    }
+    energy[energyIndex++] = Math.sqrt(sum / Math.max(1, count));
+  }
+
+  const frameRate = sampleRate / hop;
+  const averageWindow = Math.max(4, Math.round(frameRate * 0.5));
+  const onset = new Float32Array(energyIndex);
+  let rolling = 0;
+  for (let i = 0; i < energyIndex; i++) {
+    if (i > 0) rolling += energy[i - 1];
+    if (i - averageWindow - 1 >= 0) rolling -= energy[i - averageWindow - 1];
+    const used = Math.min(i, averageWindow);
+    const localAverage = used ? rolling / used : energy[i];
+    onset[i] = Math.max(0, energy[i] - localAverage * 0.9);
+  }
+
+  const scores = new Map();
+  let bestBpm = 0;
+  let bestScore = -Infinity;
+  for (let bpm = 60; bpm <= 200; bpm++) {
+    const lag = Math.max(1, Math.round(frameRate * 60 / bpm));
+    let cross = 0;
+    let left = 0;
+    let right = 0;
+    for (let i = lag; i < energyIndex; i++) {
+      const a = onset[i];
+      const b = onset[i - lag];
+      cross += a * b;
+      left += a * a;
+      right += b * b;
+    }
+    let score = cross / Math.sqrt(Math.max(1e-12, left * right));
+    // 一般的な練習テンポ域をわずかに優先し、半テンポ・倍テンポ誤認を抑える。
+    if (bpm >= 80 && bpm <= 160) score *= 1.04;
+    scores.set(bpm, score);
+    if (score > bestScore) { bestScore = score; bestBpm = bpm; }
+  }
+  if (!bestBpm || bestScore < 0.05) throw new Error('明確な拍を検出できませんでした');
+
+  // 自己相関は半テンポ・倍テンポを選びやすいため、一般的な練習域へ正規化する。
+  while (bestBpm < 80) bestBpm *= 2;
+  while (bestBpm > 160) bestBpm = Math.round(bestBpm / 2);
+  return bestBpm;
+}
+
+let autoBpmRunning = false;
+document.getElementById('autoBpmBtn').addEventListener('click', async () => {
+  if (autoBpmRunning) return;
+  const statusEl = document.getElementById('autoBpmStatus');
+  if (!audioBuffer) {
+    statusEl.textContent = 'ローカルの音声・動画を読み込んでください';
+    showToast('ローカルファイルの音声データが必要です');
+    return;
+  }
+  autoBpmRunning = true;
+  const btn = document.getElementById('autoBpmBtn');
+  btn.disabled = true;
+  statusEl.textContent = 'テンポを解析中...';
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  try {
+    const bpm = estimateBpmFromAudioBuffer(audioBuffer);
+    document.getElementById('bpmInput').value = bpm;
+    saveSettings();
+    statusEl.textContent = `推定 ${bpm} BPM に設定しました（必要なら微調整してください）`;
+    showToast(`🎵 推定テンポ ${bpm} BPM`);
+  } catch (error) {
+    statusEl.textContent = error.message || 'テンポを解析できませんでした';
+    showToast('BPMを解析できませんでした');
+  } finally {
+    autoBpmRunning = false;
+    btn.disabled = false;
+  }
 });
 
 // カウント用クリック音（高音=頭打ち、低音=その他）
