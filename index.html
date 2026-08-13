@@ -61,6 +61,28 @@
     padding: 12px 12px 0;
     justify-content: space-between;
   }
+  .app-action-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+    padding: 8px 12px 0;
+  }
+  .app-action-btn {
+    min-width: 0;
+    min-height: 38px;
+    padding: 7px 5px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .app-action-btn:active { opacity: 0.65; transform: scale(0.98); }
+  .app-action-btn.updating { color: var(--accent2); border-color: var(--accent2); }
 
   /* モード切替タブ */
   .mode-tabs {
@@ -1071,6 +1093,68 @@
   .tagline { font-size: 11px; color: var(--text-dim); letter-spacing: 0.05em; }
 
   .url-section { padding: 10px 16px; display: flex; gap: 8px; }
+  .premium-help-row {
+    padding: 0 16px 10px;
+  }
+  .premium-help-open {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid rgba(212, 168, 87, 0.55);
+    border-radius: 9px;
+    background: rgba(212, 168, 87, 0.08);
+    color: var(--accent2);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .premium-help-open:active { opacity: 0.7; transform: scale(0.99); }
+  .premium-help-intro {
+    margin: 0 0 12px;
+    color: var(--text-dim);
+    line-height: 1.65;
+  }
+  .premium-help-steps {
+    margin: 0;
+    padding-left: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    line-height: 1.55;
+  }
+  .premium-help-steps strong { color: var(--accent2); }
+  .premium-help-warning {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .premium-help-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .premium-help-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 9px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface2);
+    color: var(--text);
+    font: 700 12px 'Noto Sans JP', sans-serif;
+    text-decoration: none;
+    cursor: pointer;
+    text-align: center;
+  }
+  .premium-help-action.primary { border-color: var(--accent2); color: var(--accent2); }
   .url-input-wrap {
     position: relative;
     flex: 1;
@@ -3223,6 +3307,12 @@
   <button class="settings-btn" id="settingsBtn" title="設定"><span class="settings-btn-icon">⚙</span>設定</button>
 </header>
 
+<div class="app-action-bar" aria-label="アプリ操作">
+  <button type="button" class="app-action-btn" id="appUpdateBtn">↻ アプリを更新</button>
+  <button type="button" class="app-action-btn" id="openBrowserBtn">🌐 ブラウザで開く</button>
+  <button type="button" class="app-action-btn" id="shareAppBtn">↗ アプリ共有</button>
+</div>
+
 <!-- モード切替タブ -->
 <div class="mode-tabs">
   <div class="mode-tab active" data-mode="youtube"><svg class="yt-icon" viewBox="0 0 24 24" width="18" height="18" style="vertical-align:middle;margin-right:4px"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.6c-1 .3-1.7 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.6 9.5.6 9.5.6s7.6 0 9.5-.6c1-.3 1.7-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8z" fill="#FF0000"/><path d="M9.6 15.6V8.4l6.3 3.6-6.3 3.6z" fill="#fff"/></svg>YouTube</div>
@@ -3239,6 +3329,9 @@
   </div>
   <button class="search-btn" id="searchBtn" title="YouTubeで検索">🔍</button>
   <button class="load-btn" id="loadBtn">読込</button>
+</div>
+<div class="premium-help-row">
+  <button type="button" class="premium-help-open" id="premiumHelpOpen">Premium動画が再生できない場合</button>
 </div>
 
 <div class="video-wrapper" id="videoWrapper">
@@ -3861,6 +3954,30 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- YouTube Premium再生ヘルプ -->
+<div class="modal-backdrop" id="premiumHelpModal" style="display:none">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="premiumHelpTitle">
+    <div class="modal-header">
+      <div class="modal-title" id="premiumHelpTitle">YouTube Premium動画の再生手順</div>
+      <button class="modal-close" id="premiumHelpClose" aria-label="閉じる">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="premium-help-intro">「この動画を視聴できるのは、Music Premiumのメンバーのみです」と表示された場合は、埋め込みプレイヤーがPremiumログインを認識できていません。</p>
+      <ol class="premium-help-steps">
+        <li>iPhoneの<strong>設定 → アプリ → Safari</strong>を開きます。</li>
+        <li><strong>「サイト越えトラッキングを防ぐ」を一時的にOFF</strong>にします。</li>
+        <li>SafariでYouTubeを開き、Premium契約中のアカウントでログインしていることを確認します。</li>
+        <li>ClipLoopへ戻り、下の<strong>「ClipLoopを再読み込み」</strong>を押して動画を読み直します。</li>
+      </ol>
+      <div class="premium-help-warning">このSafari設定はClipLoopから直接変更できません。プライバシー保護のため、ClipLoopの使用後は「サイト越えトラッキングを防ぐ」をONへ戻すことをおすすめします。</div>
+      <div class="premium-help-actions">
+        <a class="premium-help-action" href="https://www.youtube.com/" target="_blank" rel="noopener">YouTubeでログイン確認</a>
+        <button type="button" class="premium-help-action primary" id="premiumHelpReload">ClipLoopを再読み込み</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- 設定ボタン -->
 <!-- 設定モーダル -->
@@ -4632,6 +4749,72 @@ function pollPosition() {
   if (isFullscreen) updateFsUI();
 }
 
+// ─── アプリ操作 ───
+const CLIPLOOP_PUBLIC_URL = 'https://drumsns-web.github.io/ClipLoop/';
+
+document.getElementById('appUpdateBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('appUpdateBtn');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.classList.add('updating');
+  btn.textContent = '↻ 更新中...';
+  showToast('最新バージョンを確認しています');
+  try {
+    if (location.protocol === 'http:' || location.protocol === 'https:') {
+      const refreshUrl = new URL(location.href);
+      refreshUrl.searchParams.set('_cliploop_update', Date.now().toString());
+      await fetch(refreshUrl.toString(), { cache: 'reload', credentials: 'same-origin' });
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(registration => registration.update().catch(() => {})));
+      }
+    }
+  } catch (error) {
+    console.warn('update check failed:', error);
+  }
+  location.reload();
+});
+
+document.getElementById('openBrowserBtn').addEventListener('click', () => {
+  const opened = window.open(CLIPLOOP_PUBLIC_URL, '_blank', 'noopener');
+  if (!opened) {
+    showToast('ブラウザで開けませんでした');
+  }
+});
+
+async function copyAppUrl() {
+  try {
+    await navigator.clipboard.writeText(CLIPLOOP_PUBLIC_URL);
+  } catch {
+    const textArea = document.createElement('textarea');
+    textArea.value = CLIPLOOP_PUBLIC_URL;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    textArea.remove();
+  }
+}
+
+document.getElementById('shareAppBtn').addEventListener('click', async () => {
+  const shareData = {
+    title: 'ClipLoop',
+    text: 'YouTubeやローカル動画をA→B区間リピートできるClipLoop',
+    url: CLIPLOOP_PUBLIC_URL
+  };
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      return;
+    } catch (error) {
+      if (error && error.name === 'AbortError') return;
+    }
+  }
+  await copyAppUrl();
+  showToast('ClipLoopのURLをコピーしました');
+});
+
 // ─── URL / Video Load ───
 function extractVideoId(url) {
   const patterns = [
@@ -4679,6 +4862,25 @@ document.getElementById('searchBtn').addEventListener('click', () => {
 document.getElementById('loadBtn').addEventListener('click', loadVideo);
 document.getElementById('urlInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') loadVideo();
+});
+
+// YouTube Premium動画の再生ヘルプ
+const premiumHelpModal = document.getElementById('premiumHelpModal');
+function openPremiumHelp() {
+  premiumHelpModal.style.display = 'flex';
+  document.getElementById('premiumHelpClose').focus();
+}
+function closePremiumHelp() {
+  premiumHelpModal.style.display = 'none';
+}
+document.getElementById('premiumHelpOpen').addEventListener('click', openPremiumHelp);
+document.getElementById('premiumHelpClose').addEventListener('click', closePremiumHelp);
+document.getElementById('premiumHelpReload').addEventListener('click', () => location.reload());
+premiumHelpModal.addEventListener('click', event => {
+  if (event.target === premiumHelpModal) closePremiumHelp();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && premiumHelpModal.style.display === 'flex') closePremiumHelp();
 });
 
 function loadVideo() {
