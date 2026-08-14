@@ -1155,6 +1155,7 @@
     text-align: center;
   }
   .premium-help-action.primary { border-color: var(--accent2); color: var(--accent2); }
+  .premium-help-action.wide { grid-column: 1 / -1; }
   .url-input-wrap {
     position: relative;
     flex: 1;
@@ -3965,15 +3966,16 @@
     <div class="modal-body">
       <p class="premium-help-intro">「この動画を視聴できるのは、Music Premiumのメンバーのみです」と表示された場合は、埋め込みプレイヤーがPremiumログインを認識できていません。</p>
       <ol class="premium-help-steps">
-        <li>iPhoneの<strong>設定 → アプリ → Safari</strong>を開きます。</li>
-        <li><strong>「サイト越えトラッキングを防ぐ」を一時的にOFF</strong>にします。</li>
-        <li>SafariでYouTubeを開き、Premium契約中のアカウントでログインしていることを確認します。</li>
-        <li>ClipLoopへ戻り、下の<strong>「ClipLoopを再読み込み」</strong>を押して動画を読み直します。</li>
+        <li>普段使用しているブラウザ（SafariやChromeなど）でYouTubeを開き、Premium契約中のアカウントでログインしていることを確認します。</li>
+        <li>下の<strong>「ブラウザでClipLoopを開く」</strong>からブラウザ版を使用します。</li>
+        <li><strong>iPhone/iPad：</strong>認識されない場合は「設定 → アプリ → Safari」の「サイト越えトラッキングを防ぐ」を一時的にOFFにします。</li>
+        <li><strong>Android Chrome：</strong>認識されない場合は「設定 → サイトの設定 → サードパーティCookie」で一時的に許可します。</li>
       </ol>
-      <div class="premium-help-warning">このSafari設定はClipLoopから直接変更できません。プライバシー保護のため、ClipLoopの使用後は「サイト越えトラッキングを防ぐ」をONへ戻すことをおすすめします。</div>
+      <div class="premium-help-warning">ホーム画面版は通常のブラウザと別のWebアプリ領域で動作するため、Premiumのログイン状態を認識できない場合があります。ClipLoopから端末のCookie・トラッキング設定を変更することはできません。使用後は変更した設定を元へ戻すことをおすすめします。</div>
       <div class="premium-help-actions">
+        <button type="button" class="premium-help-action primary wide" id="premiumHelpBrowser">ブラウザでClipLoopを開く</button>
         <a class="premium-help-action" href="https://www.youtube.com/" target="_blank" rel="noopener">YouTubeでログイン確認</a>
-        <button type="button" class="premium-help-action primary" id="premiumHelpReload">ClipLoopを再読み込み</button>
+        <button type="button" class="premium-help-action" id="premiumHelpReload">ClipLoopを再読み込み</button>
       </div>
     </div>
   </div>
@@ -4775,12 +4777,29 @@ document.getElementById('appUpdateBtn').addEventListener('click', async () => {
   location.reload();
 });
 
-document.getElementById('openBrowserBtn').addEventListener('click', () => {
-  const opened = window.open(CLIPLOOP_PUBLIC_URL, '_blank', 'noopener');
-  if (!opened) {
-    showToast('ブラウザで開けませんでした');
+function isStandaloneApp() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function openClipLoopInBrowser() {
+  // ホーム画面アプリでは同一サイトのURLがアプリ内で開き直されるため、
+  // 外部ドメインのリダイレクトを経由して通常のブラウザへ処理を渡す。
+  const browserUrl = isStandaloneApp()
+    ? 'https://www.google.com/url?sa=t&url=' + encodeURIComponent(CLIPLOOP_PUBLIC_URL)
+    : CLIPLOOP_PUBLIC_URL;
+  const opened = window.open(browserUrl, '_blank');
+  if (opened) {
+    try { opened.opener = null; } catch {}
+    showToast('ブラウザ版のClipLoopを開きます');
+    return;
   }
-});
+  if (!opened) {
+    copyAppUrl().then(() => showToast('URLをコピーしました。ブラウザへ貼り付けてください'));
+  }
+}
+
+const openBrowserBtn = document.getElementById('openBrowserBtn');
+openBrowserBtn.addEventListener('click', openClipLoopInBrowser);
 
 async function copyAppUrl() {
   try {
@@ -4875,6 +4894,7 @@ function closePremiumHelp() {
 }
 document.getElementById('premiumHelpOpen').addEventListener('click', openPremiumHelp);
 document.getElementById('premiumHelpClose').addEventListener('click', closePremiumHelp);
+document.getElementById('premiumHelpBrowser').addEventListener('click', openClipLoopInBrowser);
 document.getElementById('premiumHelpReload').addEventListener('click', () => location.reload());
 premiumHelpModal.addEventListener('click', event => {
   if (event.target === premiumHelpModal) closePremiumHelp();
